@@ -1,4 +1,4 @@
-Bloomd [![Build Status](https://travis-ci.org/armon/bloomd.png?branch=master)](https://travis-ci.org/armon/bloomd)
+Bloomd [![Build Status](https://travis-ci.org/jedisct1/bloomd.png?branch=master)](https://travis-ci.org/jedisct1/bloomd)
 =========
 
 Bloomd is a high-performance C server which is used
@@ -23,11 +23,14 @@ Install
 
 Download and build from source::
 
-    $ git clone https://armon@github.com/armon/bloomd.git
+    $ git clone https://jedisct1@github.com/jedisct1/bloomd.git
     $ cd bloomd
     $ pip install SCons  # Uses the Scons build system, may not be necessary
     $ scons
     $ ./bloomd
+
+[libsodium](https://github.com/jedisct1/libsodium) is the only
+required dependency.
 
 This will generate some errors related to building the test code
 as it depends on libcheck. To build the test code successfully,
@@ -41,12 +44,6 @@ do the following::
 
 Then re-build bloomd. At this point, the test code should build
 successfully.
-
-For CentOS or RHEL users, the kind folks from Vortex RPM have made
-a repo available with RPM's.
-
-* Repo: http://vortex-rpm.org/
-* Bloomd RPM spec: https://github.com/vortex-rpm/bloomd
 
 Usage
 -----
