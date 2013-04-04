@@ -21,12 +21,10 @@ struct bloom_hashmap {
     int count;      // Number of entries
     int table_size; // Size of table in nodes
     int max_size;   // Max size before we resize
-    uint32_t seed;  // Random hash seed
+    unsigned char seed1[crypto_shorthash_siphash24_KEYBYTES];  // Random hash seed
+    unsigned char seed2[crypto_shorthash_siphash24_KEYBYTES];  // Random hash seed
     hashmap_entry *table; // Pointer to an arry of hashmap_entry objects
 };
-
-// Link the external murmur hash in
-extern void MurmurHash3_x64_128(const void * key, const int len, const uint32_t seed, void *out);
 
 /**
  * Create hash seed value from good randomness source.
@@ -88,7 +86,8 @@ int hashmap_init(int initial_size, bloom_hashmap **map) {
     bloom_hashmap *m = calloc(1, sizeof(bloom_hashmap));
     m->table_size = initial_size;
     m->max_size = MAX_CAPACITY * initial_size;
-    m->seed = random_seed;
+    randombytes_buf(m->seed1, sizeof m->seed1);
+    randombytes_buf(m->seed2, sizeof m->seed2);    
 
     // Allocate the table
     m->table = (hashmap_entry*)calloc(initial_size, sizeof(hashmap_entry));
@@ -148,12 +147,13 @@ int hashmap_size(bloom_hashmap *map) {
  */
 int hashmap_get(bloom_hashmap *map, char *key, void **value) {
     // Compute the hash value of the key
-    uint64_t out[2];
-    MurmurHash3_x64_128(key, strlen(key), map->seed, &out);
+    uint64_t out;
+    crypto_shorthash_siphash24((unsigned char *) &out,
+                               (unsigned char *) key, strlen(key), map->seed1);
 
     // Mod the lower 64bits of the hash function with the table
     // size to get the index
-    unsigned int index = out[1] % map->table_size;
+    unsigned int index = out % map->table_size;
 
     // Look for an entry
     hashmap_entry *entry = map->table+index;
@@ -186,14 +186,16 @@ int hashmap_get(bloom_hashmap *map, char *key, void **value) {
  * @return 1 if the key is new, 0 if updated.
  */
 static int hashmap_insert_table(hashmap_entry *table, int table_size, char *key, int key_len,
-                                void *value, int should_cmp, int should_dup, uint32_t seed) {
+                                void *value, int should_cmp, int should_dup,
+                                const unsigned char *seed1) {
     // Compute the hash value of the key
-    uint64_t out[2];
-    MurmurHash3_x64_128(key, key_len, seed, &out);
+    uint64_t out;
+    crypto_shorthash_siphash24((unsigned char *) &out,
+                               (unsigned char *) key, key_len, seed1);
 
     // Mod the lower 64bits of the hash function with the table
     // size to get the index
-    unsigned int index = out[1] % table_size;
+    unsigned int index = out % table_size;
 
     // Look for an entry
     hashmap_entry *entry = table+index;
@@ -256,7 +258,7 @@ static void hashmap_double_size(bloom_hashmap *map) {
             // Do not compare keys or duplicate since we are just doubling our
             // size, and we have unique keys and duplicates already.
             hashmap_insert_table(new_table, new_size, old->key, strlen(old->key),
-                    old->value, 0, 0, map->seed);
+                    old->value, 0, 0, map->seed1);
 
             // The initial entry is in the table
             // and we should not free that one.
@@ -295,7 +297,7 @@ int hashmap_put(bloom_hashmap *map, char *key, void *value) {
 
     // Insert into the map, comparing keys and duplicating keys
     int new = hashmap_insert_table(map->table, map->table_size, key,
-        strlen(key), value, 1, 1, map->seed);
+        strlen(key), value, 1, 1, map->seed1);
     if (new) map->count += 1;
 
     return new;
@@ -309,12 +311,13 @@ int hashmap_put(bloom_hashmap *map, char *key, void *value) {
  */
 int hashmap_delete(bloom_hashmap *map, char *key) {
     // Compute the hash value of the key
-    uint64_t out[2];
-    MurmurHash3_x64_128(key, strlen(key), map->seed, &out);
+    uint64_t out;
+    crypto_shorthash_siphash24((unsigned char *) &out,
+                               (unsigned char *) key, strlen(key), map->seed1);    
 
     // Mod the lower 64bits of the hash function with the table
     // size to get the index
-    unsigned int index = out[1] % map->table_size;
+    unsigned int index = out % map->table_size;
 
     // Look for an entry
     hashmap_entry *entry = map->table+index;

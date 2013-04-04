@@ -1,16 +1,10 @@
 import platform
 
-envspooky = Environment(CPPPATH = ['deps/spookyhash/'], CPPFLAGS="-fno-exceptions -O2")
-spooky = envspooky.Library('spooky', Glob("deps/spookyhash/*.cpp"))
-
-envmurmur = Environment(CPPPATH = ['deps/murmurhash/'], CPPFLAGS="-fno-exceptions -O2")
-murmur = envmurmur.Library('murmur', Glob("deps/murmurhash/*.cpp"))
-
 envbloom = Environment(CCFLAGS = '-std=c99 -Wall -Werror -Wextra -O2 -D_GNU_SOURCE')
-bloom = envbloom.Library('bloom', Glob("src/libbloom/*.c"), LIBS=[murmur, spooky])
+bloom = envbloom.Library('bloom', Glob("src/libbloom/*.c"), LIBS=["sodium"])
 
 envtest = Environment(CCFLAGS = '-std=c99 -Wall -Werror -Wextra -Wno-unused-function -D_GNU_SOURCE -Isrc/libbloom/')
-envtest.Program('test_libbloom_runner', Glob("tests/libbloom/*.c"), LIBS=["check", bloom, murmur, spooky, "m"])
+envtest.Program('test_libbloom_runner', Glob("tests/libbloom/*.c"), LIBS=["check", bloom, "m"])
 
 envinih = Environment(CPATH = ['deps/inih/'], CFLAGS="-O2")
 inih = envinih.Library('inih', Glob("deps/inih/*.c"))
@@ -28,7 +22,7 @@ objs =  envbloomd_with_err.Object('src/bloomd/config', 'src/bloomd/config.c') + 
         envbloomd_with_err.Object('src/bloomd/filter_manager', 'src/bloomd/filter_manager.c') + \
         envbloomd_with_err.Object('src/bloomd/background', 'src/bloomd/background.c')
 
-bloom_libs = ["pthread", murmur, bloom, inih, spooky, "m", "crypto"]
+bloom_libs = ["pthread", bloom, inih, "m", "crypto", "sodium"]
 if platform.system() == 'Linux':
    bloom_libs.append("rt")
 

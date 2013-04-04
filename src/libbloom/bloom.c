@@ -4,15 +4,13 @@
 #include <string.h>
 #include <stdio.h>
 #include <syslog.h>
+#include <sodium.h>
 #include "bloom.h"
 
 /*
  * Static definitions
  */
 static const uint32_t MAGIC_HEADER = 0xCB1005DD;  // Vaguely like CBLOOMDD
-extern void MurmurHash3_x64_128(const void * key, const int len, const uint32_t seed, void *out);
-extern void SpookyHash128(const void *key, size_t len, uint64_t seed1, uint64_t seed2,
-        uint64_t *hash1, uint64_t *hash2);
 
 /**
  * Creates a new bloom filter using a given bitmap and k-value.
@@ -301,29 +299,21 @@ void bf_compute_hashes(uint32_t k_num, char *key, uint64_t *hashes) {
     // Get the length of the key
     uint64_t len = strlen(key);
 
-    // Compute the first hash
-    uint64_t out[2];
-    MurmurHash3_x64_128(key, len, 0, &out);
-
-    // Copy these out
-    hashes[0] = out[0];  // Upper 64bits of murmur
-    hashes[1] = out[1];  // Lower 64bits of murmur
-
-    // Compute the second hash
-    uint64_t *hash1 = (uint64_t*)&out;
-    uint64_t *hash2 = hash1+1;
-    SpookyHash128(key, len, 0, 0, hash1, hash2);
-
-    // Copy these out
-    hashes[2] = out[0];   // Use the upper 64bits of Spooky
-    hashes[3] = out[1];   // Use the lower 64bits of Spooky
+    unsigned char skey[crypto_shorthash_siphash24_KEYBYTES];
+    memcpy(skey, ">AMDdeclaresTheEndOfMoore'sLaw!<",
+           sizeof skey);
+    crypto_shorthash_siphash24((unsigned char *) &hashes[0],
+                               (unsigned char *) key, len, skey);
+    memcpy(skey, &hashes[0], sizeof hashes[0]);
+    crypto_shorthash_siphash24((unsigned char *) &hashes[1],
+                               (unsigned char *) key, len, skey);
 
     // Compute an arbitrary k_num using a linear combination
     // Add a mod by the largest 64bit prime. This only reduces the
     // number of addressable bits by 54 but should make the hashes
     // a bit better.
     for (uint32_t i=4; i < k_num; i++) {
-        hashes[i] = hashes[1] + ((i * hashes[3]) % 18446744073709551557U);
+        hashes[i] = hashes[0] + ((i * hashes[1]) % 18446744073709551557U);
     }
 }
 
