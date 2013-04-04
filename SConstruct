@@ -22,7 +22,7 @@ objs =  envbloomd_with_err.Object('src/bloomd/config', 'src/bloomd/config.c') + 
         envbloomd_with_err.Object('src/bloomd/filter_manager', 'src/bloomd/filter_manager.c') + \
         envbloomd_with_err.Object('src/bloomd/background', 'src/bloomd/background.c')
 
-bloom_libs = ["pthread", bloom, inih, "m", "crypto", "sodium"]
+bloom_libs = ["pthread", bloom, inih, "m", "sodium"]
 if platform.system() == 'Linux':
    bloom_libs.append("rt")
 

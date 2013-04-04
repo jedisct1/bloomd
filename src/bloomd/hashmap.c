@@ -4,7 +4,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
-#include "crypto.h"
+#include <sodium.h>
 #include "hashmap.h"
 
 #define MAX_CAPACITY 0.75
@@ -27,37 +27,12 @@ struct bloom_hashmap {
 };
 
 /**
- * Create hash seed value from good randomness source.
- * @arg random The output random value
- * @return 0 on success, -1 on error
- */
-static int hashmap_get_random(uint32_t *random_out) {
-    unsigned long ssl_err;
-    int rc;
-
-    rc = RAND_bytes((void*)random_out, sizeof *random_out);
-    if (rc == 1)
-        return 0;
-
-    char errbuf[200];
-
-    ssl_err = ERR_get_error();
-    ERR_error_string_n(ssl_err, errbuf, sizeof errbuf);
-
-    syslog(LOG_ERR, "%s failed! %s", __func__, errbuf);
-    return -1;
-}
-
-/**
  * Creates a new hashmap and allocates space for it.
  * @arg initial_size The minimim initial size. 0 for default (64).
  * @arg map Output. Set to the address of the map
  * @return 0 on success.
  */
 int hashmap_init(int initial_size, bloom_hashmap **map) {
-    int rc;
-    uint32_t random_seed;
-
     // Default to 64 if no size
     if (initial_size <= DEFAULT_CAPACITY) {
        initial_size = DEFAULT_CAPACITY;
@@ -76,11 +51,6 @@ int hashmap_init(int initial_size, bloom_hashmap **map) {
         }
         initial_size = 1 << most_sig_bit;
     }
-
-    // Get a random seed to protect table against DoS collision attacks
-    rc = hashmap_get_random(&random_seed);
-    if (rc < 0)
-        return -1;
 
     // Allocate the map
     bloom_hashmap *m = calloc(1, sizeof(bloom_hashmap));
