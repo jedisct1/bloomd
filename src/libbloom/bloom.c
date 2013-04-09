@@ -43,6 +43,10 @@ int bf_from_bitmap(bloom_bitmap *map, uint32_t k_num, int new_filter, bloom_bloo
         filter->header->magic = MAGIC_HEADER;
         filter->header->k_num = k_num;
         filter->header->count = 0;
+        randombytes_buf(&filter->header->skeys[0],
+                        sizeof filter->header->skeys[0]);
+        randombytes_buf(&filter->header->skeys[1],
+                        sizeof filter->header->skeys[1]);
 
         // Since this is a new filter, force a flush of
         // the headers. This mainly affects bitmaps that
@@ -300,14 +304,12 @@ void bf_compute_hashes(bloom_bloomfilter *filter, char *key, uint64_t *hashes) {
     uint64_t len = strlen(key);
     uint32_t k_num = filter->header->k_num;
 
-    unsigned char skey[crypto_shorthash_siphash24_KEYBYTES];
-    memcpy(skey, ">AMDdeclaresTheEndOfMoore'sLaw!<",
-           sizeof skey);
     crypto_shorthash_siphash24((unsigned char *) &hashes[0],
-                               (unsigned char *) key, len, skey);
-    memcpy(skey, &hashes[0], sizeof hashes[0]);
+                               (unsigned char *) key, len,
+                               filter->header->skeys[0]);
     crypto_shorthash_siphash24((unsigned char *) &hashes[1],
-                               (unsigned char *) key, len, skey);
+                               (unsigned char *) key, len,
+                               filter->header->skeys[1]);
 
     // Compute an arbitrary k_num using a linear combination
     // Add a mod by the largest 64bit prime. This only reduces the

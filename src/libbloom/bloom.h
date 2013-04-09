@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <sodium.h>
 #include "bitmap.h"
 
 /**
@@ -13,7 +14,8 @@ struct bloom_filter_header {
     uint32_t magic;     // Magic 4 bytes
     uint32_t k_num;     // K_num value
     uint64_t count;     // Count of items
-    char __buf[496];     // Pad out to 512 bytes
+    unsigned char skeys[2][crypto_shorthash_siphash24_KEYBYTES]; // Secret keys
+    char __buf[512-4-4-8-2*crypto_shorthash_siphash24_KEYBYTES]; // Pad out to 512 bytes
 } __attribute__ ((packed));
 typedef struct bloom_filter_header bloom_filter_header;
 
