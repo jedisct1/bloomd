@@ -89,7 +89,7 @@ int bf_close(bloom_bloomfilter *filter);
  * @arg key The key to hash
  * @arg hashes Array to write to
  */
-void bf_compute_hashes(uint32_t k_num, char *key, uint64_t *hashes);
+void bf_compute_hashes(bloom_bloomfilter *filter, char *key, uint64_t *hashes);
 
 /*
  * Utility methods for computing parameters

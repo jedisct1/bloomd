@@ -140,7 +140,12 @@ START_TEST(test_hashes_basic)
     uint32_t k_num = 1000;
     char *key = "the quick brown fox";
     uint64_t hashes[1000];
-    bf_compute_hashes(k_num, key, (uint64_t*)&hashes);
+    bloom_filter_header bh;
+    bloom_bloomfilter filter;
+    bh.k_num = k_num;
+    filter.header = &bh;
+
+    bf_compute_hashes(filter, key, (uint64_t*)&hashes);
 
     // Check that all the hashes are unique.
     // This is O(n^2) but fuck it.
@@ -158,7 +163,12 @@ START_TEST(test_hashes_one_byte)
     uint32_t k_num = 1000;
     char *key = "A";
     uint64_t hashes[1000];
-    bf_compute_hashes(k_num, key, (uint64_t*)&hashes);
+    bloom_filter_header bh;
+    bloom_bloomfilter filter;
+    bh.k_num = k_num;
+    filter.header = &bh;
+
+    bf_compute_hashes(filter, key, (uint64_t*)&hashes);
 
     // Check that all the hashes are unique.
     // This is O(n^2) but fuck it.
@@ -177,8 +187,12 @@ START_TEST(test_hashes_consistent)
     char *key2= "abcdefghijklmnopqrstuvwxyz";
     uint64_t hashes[10];
     uint64_t hashes_cpy[10];
+    bloom_filter_header bh;
+    bloom_bloomfilter filter;
+    bh.k_num = k_num;
+    filter.header = &bh;
 
-    bf_compute_hashes(k_num, key, (uint64_t*)&hashes);
+    bf_compute_hashes(filter, key, (uint64_t*)&hashes);
 
     // Copy the hashes
     for (int i=0; i< 10; i++) {
@@ -186,8 +200,8 @@ START_TEST(test_hashes_consistent)
     }
 
     // Compute something else, then re-hash the first key
-    bf_compute_hashes(k_num, key2, (uint64_t*)&hashes);
-    bf_compute_hashes(k_num, key, (uint64_t*)&hashes);
+    bf_compute_hashes(filter, key2, (uint64_t*)&hashes);
+    bf_compute_hashes(filter, key, (uint64_t*)&hashes);
 
     // Check for equality
     for (int i=0; i< 10; i++) {
@@ -203,8 +217,12 @@ START_TEST(test_hashes_key_length)
     char *key1 = "cat\0ABCDEFGHI";
     uint64_t hashes[10];
     uint64_t hashes_cpy[10];
-
-    bf_compute_hashes(k_num, key, (uint64_t*)&hashes);
+    bloom_filter_header bh;
+    bloom_bloomfilter filter;
+    bh.k_num = k_num;
+    filter.header = &bh;
+    
+    bf_compute_hashes(filter, key, (uint64_t*)&hashes);
 
     // Copy the hashes
     for (int i=0; i< 10; i++) {
@@ -212,7 +230,7 @@ START_TEST(test_hashes_key_length)
     }
 
     // Compute of second variant
-    bf_compute_hashes(k_num, key1, (uint64_t*)&hashes);
+    bf_compute_hashes(filter, key1, (uint64_t*)&hashes);
 
     // Check for equality
     for (int i=0; i< 10; i++) {
@@ -225,33 +243,36 @@ START_TEST(test_hashes_same_buffer)
 {
     uint32_t k_num = 10;
     uint64_t hashes[10];
-
+    bloom_filter_header bh;
+    bloom_bloomfilter filter;
+    bh.k_num = k_num;
+    filter.header = &bh;
     char buf[100];
 
     uint64_t hash0 = 0;
     snprintf((char*)&buf, 100, "test0");
-    bf_compute_hashes(k_num, (char*)&buf, (uint64_t*)&hashes);
+    bf_compute_hashes(filter, (char*)&buf, (uint64_t*)&hashes);
     for (int i=0; i< 10; i++) {
         hash0 ^= hashes[i];
     }
 
     uint64_t hash1 = 0;
     snprintf((char*)&buf, 100, "ABCDEFGHI");
-    bf_compute_hashes(k_num, (char*)&buf, (uint64_t*)&hashes);
+    bf_compute_hashes(filter, (char*)&buf, (uint64_t*)&hashes);
     for (int i=0; i< 10; i++) {
         hash1 ^= hashes[i];
     }
 
     uint64_t hash2 = 0;
     snprintf((char*)&buf, 100, "test0");
-    bf_compute_hashes(k_num, (char*)&buf, (uint64_t*)&hashes);
+    bf_compute_hashes(filter, (char*)&buf, (uint64_t*)&hashes);
     for (int i=0; i< 10; i++) {
         hash2 ^= hashes[i];
     }
 
     uint64_t hash3 = 0;
     snprintf((char*)&buf, 100, "ABCDEFGHI");
-    bf_compute_hashes(k_num, (char*)&buf, (uint64_t*)&hashes);
+    bf_compute_hashes(filter, (char*)&buf, (uint64_t*)&hashes);
     for (int i=0; i< 10; i++) {
         hash3 ^= hashes[i];
     }

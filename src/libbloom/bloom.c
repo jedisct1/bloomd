@@ -105,7 +105,7 @@ int bf_add(bloom_bloomfilter *filter, char* key) {
     uint64_t *hashes = alloca(filter->header->k_num * sizeof(uint64_t));
 
     // Compute the hashes
-    bf_compute_hashes(filter->header->k_num, key, hashes);
+    bf_compute_hashes(filter, key, hashes);
 
     // Check if the item exists
     int res = bf_internal_contains(filter, hashes);
@@ -141,7 +141,7 @@ int bf_contains(bloom_bloomfilter *filter, char* key) {
     uint64_t *hashes = alloca(filter->header->k_num * sizeof(uint64_t));
 
     // Compute the hashes
-    bf_compute_hashes(filter->header->k_num, key, hashes);
+    bf_compute_hashes(filter, key, hashes);
 
     // Use the internal contains method
     return bf_internal_contains(filter, hashes);
@@ -283,7 +283,7 @@ int bf_ideal_k_num(bloom_filter_params *params) {
 }
 
 // Computes our hashes
-void bf_compute_hashes(uint32_t k_num, char *key, uint64_t *hashes) {
+void bf_compute_hashes(bloom_bloomfilter *filter, char *key, uint64_t *hashes) {
     /**
      * We use the results of
      * 'Less Hashing, Same Performance: Building a Better Bloom Filter'
@@ -298,6 +298,7 @@ void bf_compute_hashes(uint32_t k_num, char *key, uint64_t *hashes) {
 
     // Get the length of the key
     uint64_t len = strlen(key);
+    uint32_t k_num = filter->header->k_num;
 
     unsigned char skey[crypto_shorthash_siphash24_KEYBYTES];
     memcpy(skey, ">AMDdeclaresTheEndOfMoore'sLaw!<",
